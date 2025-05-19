@@ -4,7 +4,7 @@ Conversion engine for transforming Conga templates to Box DocGen templates
 import re
 from typing import Dict, List, Any, Optional, Tuple
 import docx
-from .box_ai_client import BoxAIClient
+from box_ai_client import BoxAIClient
 
 
 class ConversionEngine:
