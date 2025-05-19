@@ -8,11 +8,11 @@ import streamlit as st
 import docx
 from typing import Dict, List, Any, Optional
 
-from .parser import CongaTemplateParser
-from .converter import ConversionEngine
-from .validator import ValidationEngine
-from .box_ai_client import BoxAIClient
-from .exporter import DocxExporter
+from parser import CongaTemplateParser
+from converter import ConversionEngine
+from validator import ValidationEngine
+from box_ai_client import BoxAIClient
+from exporter import DocxExporter
 
 
 def main():
