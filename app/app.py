@@ -17,17 +17,17 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
-from app.auth import BoxAuthError, get_authenticated_client, AuthMethod
-from app.box_ai_client import BoxAIClient, BoxAIClientError
-from app.conversion_engine import ConversionEngine
-from app.exporter import DocxExporter
-from app.parser import CongaTemplateParser
-from app.prompt_builder import PromptBuilder, ConversionContext
-from app.query_loader import CongaQueryLoader
-from app.response_parser import AIResponseParser
-from app.schema_loader import JSONSchemaLoader
-from app.template_generator import DocGenTemplateGenerator
-from app.validation_engine import ValidationEngine
+from .auth import BoxAuthError, get_authenticated_client, AuthMethod
+from .box_ai_client import BoxAIClient, BoxAIClientError
+from .conversion_engine import ConversionEngine
+from .exporter import DocxExporter
+from .parser import CongaTemplateParser
+from .prompt_builder import PromptBuilder, ConversionContext
+from .query_loader import CongaQueryLoader
+from .response_parser import AIResponseParser
+from .schema_loader import JSONSchemaLoader
+from .template_generator import DocGenTemplateGenerator
+from .validation_engine import ValidationEngine
 
 # Authentication settings
 AUTH_CONFIG_FILE = "config/box_auth.json"  # Path to your authentication config file
