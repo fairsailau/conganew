@@ -17,31 +17,62 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
+# Try relative imports first (for package)
 try:
-    # For when running as a package (production)
     from .auth import BoxAuthError, get_authenticated_client, AuthMethod
+except ImportError:
+    # Fall back to direct imports if running directly
+    from auth import BoxAuthError, get_authenticated_client, AuthMethod
+
+# Import other modules with fallback
+try:
     from .box_ai_client import BoxAIClient, BoxAIClientError
+except ImportError:
+    from box_ai_client import BoxAIClient, BoxAIClientError
+
+try:
     from .conversion_engine import ConversionEngine
+except ImportError:
+    from conversion_engine import ConversionEngine
+
+try:
     from .exporter import DocxExporter
+except ImportError:
+    from exporter import DocxExporter
+
+try:
     from .parser import CongaTemplateParser
+except ImportError:
+    from parser import CongaTemplateParser
+
+try:
     from .prompt_builder import PromptBuilder, ConversionContext
+except ImportError:
+    from prompt_builder import PromptBuilder, ConversionContext
+
+try:
     from .query_loader import CongaQueryLoader
+except ImportError:
+    from query_loader import CongaQueryLoader
+
+try:
     from .response_parser import AIResponseParser
+except ImportError:
+    from response_parser import AIResponseParser
+
+try:
     from .schema_loader import JSONSchemaLoader
+except ImportError:
+    from schema_loader import JSONSchemaLoader
+
+try:
     from .template_generator import DocGenTemplateGenerator
+except ImportError:
+    from template_generator import DocGenTemplateGenerator
+
+try:
     from .validation_engine import ValidationEngine
 except ImportError:
-    # For development when running the file directly
-    from auth import BoxAuthError, get_authenticated_client, AuthMethod
-    from box_ai_client import BoxAIClient, BoxAIClientError
-    from conversion_engine import ConversionEngine
-    from exporter import DocxExporter
-    from parser import CongaTemplateParser
-    from prompt_builder import PromptBuilder, ConversionContext
-    from query_loader import CongaQueryLoader
-    from response_parser import AIResponseParser
-    from schema_loader import JSONSchemaLoader
-    from template_generator import DocGenTemplateGenerator
     from validation_engine import ValidationEngine
 
 # Authentication settings
