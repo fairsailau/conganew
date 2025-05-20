@@ -7,12 +7,43 @@ from typing import Dict, List, Any, Optional, Union, Tuple
 from boxsdk import Client
 from boxsdk.exception import BoxAPIException
 
+
+class BoxAIClientError(Exception):
+    """Base exception for Box AI client errors."""
+    pass
+
+
 try:
     # For production
-    from .auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
+    from .auth import BoxAuthError, get_authenticated_client, AuthMethod
 except ImportError:
     # For development
-    from auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
+    try:
+        from auth import BoxAuthError, get_authenticated_client, AuthMethod
+    except ImportError:
+        # Fallback if auth module is not available
+        class BoxAuthError(Exception):
+            """Custom exception for Box authentication errors."""
+            pass
+
+        class AuthMethod:
+            """Authentication method enum."""
+            JWT = 'jwt'
+            OAUTH2 = 'oauth2'
+
+        def get_authenticated_client(auth_config):
+            """
+            Get an authenticated Box client.
+            
+            Args:
+                auth_config: Authentication configuration
+                
+            Returns:
+                Authenticated Box client
+            """
+            # This is a placeholder implementation
+            # In a real implementation, this would authenticate with Box
+            raise BoxAuthError("Authentication not configured")
 
 
 class BoxAIClient:
