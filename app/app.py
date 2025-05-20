@@ -107,7 +107,8 @@ def render_auth_sidebar():
             "Authentication Method",
             ["JWT (Server Authentication)", 
              "OAuth 2.0 (Client Credentials)", 
-             "OAuth 2.0 (Authorization Code)"],
+             "OAuth 2.0 (Authorization Code)",
+             "Developer Token (Testing)"],
             index=0
         )
         
@@ -143,7 +144,7 @@ def render_auth_sidebar():
                 }
                 st.success("OAuth 2.0 configuration saved!")
         
-        else:  # OAuth 2.0 (Authorization Code)
+        elif auth_method == "OAuth 2.0 (Authorization Code)":
             st.session_state.auth_method = AuthMethod.OAUTH2_AC
             client_id = st.text_input("Client ID")
             client_secret = st.text_input("Client Secret", type="password")
@@ -155,6 +156,17 @@ def render_auth_sidebar():
                     "auth_method": 'oauth2_ac'
                 }
                 st.success("OAuth 2.0 configuration saved!")
+                
+        else:  # Developer Token
+            st.session_state.auth_method = AuthMethod.DEVELOPER_TOKEN
+            developer_token = st.text_input("Developer Token", type="password")
+            
+            if st.button("Save Developer Token"):
+                st.session_state.auth_config = {
+                    "developerToken": developer_token,
+                    "auth_method": 'developer_token'
+                }
+                st.success("Developer token saved!")
         
         # Schema upload
         st.subheader("Schema Configuration")
