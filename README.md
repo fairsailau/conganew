@@ -22,48 +22,29 @@ This Streamlit application converts Conga Composer templates to Box DocGen templ
 1. Clone this repository
 
 2. Install dependencies:
-
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Create a `.streamlit/secrets.toml` file with your Box API credentials. Example:
-
-   ```toml
-   [box]
-   # Choose one authentication method:
-   
-   # 1. Developer Token (easiest for testing)
-   auth_method = "developer_token"
-   developer_token = "your_developer_token_here"
-   
-   # 2. JWT Authentication (for production)
-   # auth_method = "jwt"
-   # config = """
-   # {
-   #   "boxAppSettings": {
-   #     "clientID": "your_client_id",
-   #     "clientSecret": "your_client_secret",
-   #     "appAuth": {
-   #       "publicKeyID": "your_public_key_id",
-   #       "privateKey": "-----BEGIN ENCRYPTED PRIVATE KEY-----\n...\n-----END ENCRYPTED PRIVATE KEY-----\n",
-   #       "passphrase": "your_passphrase"
-   #     }
-   #   },
-   #   "enterpriseID": "your_enterprise_id"
-   # }
-   # """
-   
-   # 3. OAuth 2.0 Client Credentials
-   # auth_method = "oauth2_ccg"
-   # client_id = "your_client_id"
-   # client_secret = "your_client_secret"
-   # enterprise_id = "your_enterprise_id"
-   ```
+3. Configure your Box Developer Token in Streamlit Secrets:
+   - Run the app with `streamlit run app/app.py`
+   - Click the ☰ menu in the top-right corner
+   - Select "Settings"
+   - Click on "Secrets"
+   - Add your Box Developer Token:
+     ```
+     BOX_DEVELOPER_TOKEN = "your_developer_token_here"
+     ```
 
 ### For Production Deployment
 
-When deploying to Streamlit Cloud or another platform, set the secrets through the platform's secret management system. For Streamlit Cloud, use the "Advanced settings" when deploying to set the secrets.
+When deploying to Streamlit Cloud:
+1. Go to your app's settings
+2. Click on "Secrets"
+3. Add your Box Developer Token:
+   ```
+   BOX_DEVELOPER_TOKEN = "your_developer_token_here"
+   ```
 
 ## Usage
 

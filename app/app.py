@@ -100,75 +100,49 @@ def initialize_session_state():
 
 def get_auth_config():
     """Get authentication configuration from Streamlit Secrets"""
-    if 'box' not in st.secrets:
-        st.error("Please configure the authentication in Streamlit Secrets")
+    if 'BOX_DEVELOPER_TOKEN' not in st.secrets:
+        st.error("Please configure the Box Developer Token in Streamlit Secrets")
+        st.markdown("""
+        ### How to configure:
+        1. Click the hamburger menu (☰) in the top-right corner
+        2. Select "Settings"
+        3. Click on "Secrets"
+        4. Add your Box Developer Token:
+        ```
+        BOX_DEVELOPER_TOKEN = "your_developer_token_here"
+        ```
+        """)
         st.stop()
     
-    config = st.secrets['box']
-    auth_method = config.get('auth_method')
-    
-    if not auth_method:
-        st.error("No authentication method specified in secrets.toml")
-        st.stop()
-    
-    if auth_method == 'jwt':
-        try:
-            auth_config = json.loads(config.get('config', '{}'))
-            auth_config['auth_method'] = AuthMethod.JWT
-            return auth_config
-        except json.JSONDecodeError:
-            st.error("Invalid JSON configuration for JWT")
-            st.stop()
-    
-    elif auth_method == 'oauth2_ccg':
-        return {
-            'clientID': config.get('client_id'),
-            'clientSecret': config.get('client_secret'),
-            'enterpriseID': config.get('enterprise_id'),
-            'auth_method': AuthMethod.OAUTH2_CCG
-        }
-    
-    elif auth_method == 'developer_token':
-        return {
-            'developer_token': config.get('developer_token'),
-            'auth_method': AuthMethod.DEVELOPER_TOKEN
-        }
-    
-    else:
-        st.error(f"Unsupported authentication method: {auth_method}")
-        st.stop()
+    return {
+        'developer_token': st.secrets['BOX_DEVELOPER_TOKEN'],
+        'auth_method': AuthMethod.DEVELOPER_TOKEN
+    }
 
 def render_auth_status():
     """Show authentication status in the sidebar"""
     with st.sidebar:
         st.header("Authentication")
         
-        if 'box' not in st.secrets:
+        if 'BOX_DEVELOPER_TOKEN' not in st.secrets:
             st.error("Authentication not configured")
             st.markdown("""
-            Please configure authentication in `secrets.toml`:
-            ```toml
-            [box]
-            auth_method = "developer_token"  # or "jwt" or "oauth2_ccg"
-            developer_token = "your_token_here"
+            Please configure your Box Developer Token in the Streamlit Secrets.
+            
+            1. Click the ☰ menu in the top-right corner
+            2. Select "Settings"
+            3. Click on "Secrets"
+            4. Add your token:
             ```
-            For more details, see [Streamlit Secrets Management](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
+            BOX_DEVELOPER_TOKEN = "your_token_here"
+            ```
             """)
             st.stop()
         
-        auth_method = st.secrets['box'].get('auth_method', 'not configured')
-        st.success(f"Authenticated using: {auth_method.upper()}")
+        st.success("✅ Developer token configured")
         
-        if st.button("View Authentication Info", key="view_auth_info"):
-            st.json({k: "***" if "token" in k.lower() or "secret" in k.lower() or "key" in k.lower() else v 
-                   for k, v in st.secrets['box'].items()})
-            
-            # Show user info if available in session state
-            user_info = getattr(st.session_state, 'authenticated_user', None)
-            if user_info:
-                st.success(f"✅ Successfully authenticated as {user_info.get('name', 'Unknown User')} ({user_info.get('login', 'N/A')})")
-            else:
-                st.success("✅ Authentication configured")
+        if st.button("View Authentication Status"):
+            st.code("Developer token: ************" + st.secrets['BOX_DEVELOPER_TOKEN'][-4:])
         
         # Schema upload
         st.subheader("Schema Configuration")
