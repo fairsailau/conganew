@@ -92,18 +92,41 @@ class BoxAIClient:
         elif auth_method == AuthMethod.DEVELOPER_TOKEN:
             try:
                 developer_token = config.get('developerToken')
+                
+                # Validate the developer token
                 if not developer_token:
                     raise BoxAuthError("Developer token is required")
                     
+                if not isinstance(developer_token, str) or len(developer_token) < 10:
+                    raise BoxAuthError("Invalid developer token format. Please check your token and try again.")
+                
                 # For developer token, we can directly create a client with the token
                 # This is a simpler approach that works with just the token
-                return Client(
-                    OAuth2(
+                try:
+                    oauth = OAuth2(
                         client_id=None,
                         client_secret=None,
-                        access_token=developer_token
+                        access_token=developer_token.strip()
                     )
-                )
+                    
+                    # Test the token by making a simple API call
+                    client = Client(oauth)
+                    user = client.user(user_id='me').get()
+                    
+                    st.session_state.authenticated_user = {
+                        'name': user.name,
+                        'login': user.login,
+                        'status': 'active'
+                    }
+                    
+                    return client
+                    
+                except Exception as e:
+                    raise BoxAuthError(f"Failed to authenticate with the provided developer token. Please check if the token is valid and has not expired.")
+                    
+            except BoxAuthError:
+                raise  # Re-raise BoxAuthError as is
+                
             except Exception as e:
                 raise BoxAuthError(f"Developer token authentication failed: {str(e)}")
             

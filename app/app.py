@@ -17,11 +17,7 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
-# Import from box_ai_client first
-try:
-    from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
-except ImportError:
-    from box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
 
 # Keep old imports for backward compatibility
 try:
@@ -84,20 +80,22 @@ AUTH_CONFIG_FILE = "config/box_auth.json"  # Path to your authentication config 
 
 def initialize_session_state():
     """Initialize session state variables"""
-    if 'converted_docs' not in st.session_state:
-        st.session_state.converted_docs = {}
-    if 'validation_results' not in st.session_state:
-        st.session_state.validation_results = {}
     if 'auth_config' not in st.session_state:
-        st.session_state.auth_config = None
+        st.session_state.auth_config = {}
     if 'auth_method' not in st.session_state:
         st.session_state.auth_method = None
     if 'schema_data' not in st.session_state:
         st.session_state.schema_data = None
-    if 'converted_doc' not in st.session_state:
-        st.session_state.converted_doc = None
-    if 'validation_summary' not in st.session_state:
-        st.session_state.validation_summary = {}
+    if 'conversion_results' not in st.session_state:
+        st.session_state.conversion_results = None
+    if 'error' not in st.session_state:
+        st.session_state.error = None
+    if 'success' not in st.session_state:
+        st.session_state.success = None
+    if 'converted_files' not in st.session_state:
+        st.session_state.converted_files = []
+    if 'processing' not in st.session_state:
+        st.session_state.processing = False
 
 
 def render_auth_sidebar():
@@ -162,14 +160,57 @@ def render_auth_sidebar():
                 
         else:  # Developer Token
             st.session_state.auth_method = AuthMethod.DEVELOPER_TOKEN
-            developer_token = st.text_input("Developer Token", type="password")
             
-            if st.button("Save Developer Token"):
-                st.session_state.auth_config = {
-                    "developerToken": developer_token,
-                    "auth_method": AuthMethod.DEVELOPER_TOKEN
-                }
-                st.success("Developer token saved!")
+            # Add help text and info about developer tokens
+            st.markdown("""
+            **Developer Token**  
+            Generate a developer token from the [Box Developer Console](https://app.box.com/developers/console).
+            Note: Developer tokens are only valid for 60 minutes.
+            """)
+            
+            # Add a more prominent input field
+            developer_token = st.text_input(
+                "Developer Token",
+                type="password",
+                placeholder="Enter your Box developer token",
+                help="A valid Box developer token is required for API access"
+            )
+            
+            # Add validation and feedback
+            if developer_token:
+                if len(developer_token) < 10:
+                    st.warning("Developer token appears to be too short. Please check your token.")
+            
+            if st.button("Save Developer Token", key="save_dev_token"):
+                if not developer_token:
+                    st.error("Please enter a developer token")
+                elif len(developer_token) < 10:
+                    st.error("Invalid developer token. The token is too short.")
+                else:
+                    try:
+                        # Test the token by creating a client
+                        test_client = BoxAIClient({
+                            "developerToken": developer_token,
+                            "auth_method": AuthMethod.DEVELOPER_TOKEN
+                        })
+                        
+                        # If we get here, authentication was successful
+                        st.session_state.auth_config = {
+                            "developerToken": developer_token,
+                            "auth_method": AuthMethod.DEVELOPER_TOKEN
+                        }
+                        
+                        # Show success message with user info if available
+                        user_info = getattr(st.session_state, 'authenticated_user', None)
+                        if user_info:
+                            st.success(f"✅ Successfully authenticated as {user_info.get('name', 'Unknown User')} ({user_info.get('login', 'N/A')})")
+                        else:
+                            st.success("✅ Developer token saved and verified!")
+                            
+                    except BoxAuthError as e:
+                        st.error(f"Authentication failed: {str(e)}")
+                    except Exception as e:
+                        st.error(f"An error occurred: {str(e)}")
         
         # Schema upload
         st.subheader("Schema Configuration")
@@ -210,85 +251,61 @@ def main():
     st.set_page_config(
         page_title="Conga to Box DocGen Converter",
         page_icon="📄",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
-    
-    st.title("Conga to Box DocGen Template Converter")
-    st.write("Convert Conga Composer templates to Box DocGen format while preserving formatting")
-    
+
     # Initialize session state
     initialize_session_state()
-    
-    # Render sidebar and get processing options
+
+    # Render the sidebar with authentication options
     use_ai, validate_output = render_auth_sidebar()
-    
+
     # Main content area
-    st.header("Template Conversion")
-    
-    # File upload section
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Upload Files")
-        
-        # Template file upload
-        template_file = st.file_uploader(
-            "Upload Conga Template (DOCX)",
-            type=["docx"],
+    st.title("Conga to Box DocGen Template Converter")
+    st.markdown("""
+    Upload a Conga template file or paste a Conga SOQL query to convert it to a Box DocGen template.
+    """)
+
+    # File upload or query input
+    tab1, tab2 = st.tabs(["Upload Template File", "Paste SOQL Query"])
+
+    with tab1:
+        uploaded_file = st.file_uploader(
+            "Upload a Conga template file (DOCX, PPTX, or XLSX)",
+            type=["docx", "pptx", "xlsx"],
             key="template_uploader"
         )
-        
-        # Query input
+        query_text = ""
+
+    with tab2:
         query_text = st.text_area(
-            "Enter Conga Query (SOQL)",
-            height=150,
-            help="Paste your Conga SOQL query here"
+            "Paste your Conga SOQL query here",
+            height=200,
+            help="Example: SELECT Id, Name FROM Account"
         )
-        
-        # Custom instructions
-        custom_instructions = st.text_area(
-            "Custom Instructions (optional)",
-            height=100,
-            help="Any specific instructions for the conversion"
-        )
-        
-        # Convert button
-        convert_btn = st.button("Convert to Box DocGen", type="primary")
-    
-    with col2:
-        st.subheader("Preview")
-        
-        if st.session_state.converted_doc:
-            # Show preview of converted document
-            st.markdown("### Converted Template Preview")
-            preview_docx_from_path(st.session_state.converted_doc)
-            
-            # Download button
-            with open(st.session_state.converted_doc, "rb") as f:
-                st.download_button(
-                    label="Download Converted Template",
-                    data=f,
-                    file_name=f"converted_{os.path.basename(st.session_state.converted_doc)}",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-            
-            # Show validation results if available
-            if st.session_state.validation_results:
-                st.subheader("Validation Results")
-                st.json(st.session_state.validation_results)
-    
-    # Process conversion when button is clicked
-    if convert_btn and (template_file or query_text):
-        with st.spinner("Converting template..."):
-            try:
-                # Check authentication if using AI
-                if use_ai and not st.session_state.auth_config:
-                    st.error("Authentication configuration is required for AI-assisted conversion")
-                    return
-                
-                # Process the conversion
+        uploaded_file = None
+
+    # Custom instructions
+    custom_instructions = st.text_area(
+        "Custom Instructions (optional)",
+        help="Provide any specific instructions for the conversion"
+    )
+
+    # Convert button
+    if st.button("Convert to Box DocGen", type="primary"):
+        if not uploaded_file and not query_text.strip():
+            st.error("Please upload a file or paste a SOQL query")
+            return
+
+        if not st.session_state.auth_config:
+            st.error("Please configure authentication first")
+            return
+
+        try:
+            with st.spinner("Converting template..."):
                 process_conversion(
-                    template_file=template_file,
+                    uploaded_file=uploaded_file,
                     query_text=query_text,
                     schema_data=st.session_state.schema_data,
                     use_ai=use_ai,
@@ -296,33 +313,30 @@ def main():
                     auth_config=st.session_state.auth_config,
                     custom_instructions=custom_instructions
                 )
-                
                 # Refresh the page to show results
                 st.rerun()
                 
-            except BoxAuthError as e:
-                st.error(f"Authentication error: {str(e)}")
-            except Exception as e:
-                st.error(f"Error during conversion: {str(e)}")
-                st.exception(e)
-    elif convert_btn and not template_file and not query_text:
-        st.warning("Please upload a template file or enter a query to convert.")
+        except BoxAuthError as e:
+            st.error(f"Authentication error: {str(e)}")
+        except Exception as e:
+            st.error(f"An error occurred during conversion: {str(e)}")
+            st.exception(e)  # This will show the full traceback in the app
 
 
 def process_conversion(
-    template_file: Optional[Any],
-    query_text: str,
-    schema_data: Optional[Dict],
-    use_ai: bool,
-    validate_output: bool,
-    auth_config: Dict[str, Any],
+    uploaded_file: Optional[Any] = None,
+    query_text: str = "",
+    schema_data: Optional[Dict] = None,
+    use_ai: bool = False,
+    validate_output: bool = True,
+    auth_config: Optional[Dict[str, Any]] = None,
     custom_instructions: str = ""
 ) -> None:
     """
     Process the conversion of a Conga template to Box DocGen format
     
     Args:
-        template_file: Uploaded template file object (can be None if using query)
+        uploaded_file: Uploaded template file object (can be None if using query)
         query_text: Conga SOQL query text
         schema_data: JSON schema data for field mapping
         use_ai: Whether to use Box AI for complex conversions
@@ -333,6 +347,10 @@ def process_conversion(
     # Initialize Box AI client if needed
     box_ai_client = None
     if use_ai:
+        if not auth_config:
+            st.error("Authentication configuration is required for AI-assisted conversion")
+            return
+            
         try:
             box_ai_client = BoxAIClient(auth_config)
             st.session_state.box_ai_client = box_ai_client
@@ -349,23 +367,39 @@ def process_conversion(
     
     # Process template file if provided
     template_content = ""
-    if template_file:
+    if uploaded_file:
         try:
-            doc = docx.Document(template_file)
+            # Handle both file path and file-like objects
+            if hasattr(uploaded_file, 'read'):
+                doc = Document(io.BytesIO(uploaded_file.getvalue()))
+            else:
+                doc = Document(uploaded_file)
+                
             template_content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            
+            # Store the uploaded file info in session state
+            st.session_state.uploaded_file_name = uploaded_file.name
+            
         except Exception as e:
             st.error(f"Error reading template file: {str(e)}")
+            st.exception(e)
             return
     
     # Process query if provided
     query_components = {}
-    if query_text:
+    if query_text and query_text.strip():
         try:
             query_loader = CongaQueryLoader(query_text)
             query_components = query_loader.get_query_components()
         except Exception as e:
             st.error(f"Error processing query: {str(e)}")
+            st.exception(e)
             return
+    
+    # Validate that we have either a template or a query
+    if not template_content and not query_components:
+        st.error("Please provide either a template file or a SOQL query")
+        return
     
     # Build the conversion context
     context = ConversionContext(
