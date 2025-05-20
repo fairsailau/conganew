@@ -95,12 +95,15 @@ class BoxAIClient:
                 if not developer_token:
                     raise BoxAuthError("Developer token is required")
                     
-                oauth = OAuth2(
-                    client_id=None,  # Not needed for developer token
-                    client_secret=None,
-                    access_token=developer_token
+                # For developer token, we can directly create a client with the token
+                # This is a simpler approach that works with just the token
+                return Client(
+                    OAuth2(
+                        client_id=None,
+                        client_secret=None,
+                        access_token=developer_token
+                    )
                 )
-                return Client(oauth)
             except Exception as e:
                 raise BoxAuthError(f"Developer token authentication failed: {str(e)}")
             

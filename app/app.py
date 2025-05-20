@@ -127,7 +127,7 @@ def render_auth_sidebar():
             if st.button("Save JWT Config"):
                 try:
                     st.session_state.auth_config = json.loads(config_json)
-                    st.session_state.auth_config['auth_method'] = 'jwt'
+                    st.session_state.auth_config['auth_method'] = AuthMethod.JWT
                     st.success("JWT configuration saved!")
                 except json.JSONDecodeError as e:
                     st.error(f"Invalid JSON: {str(e)}")
@@ -143,7 +143,7 @@ def render_auth_sidebar():
                     "clientID": client_id,
                     "clientSecret": client_secret,
                     "enterpriseID": enterprise_id,
-                    "auth_method": 'oauth2_ccg'
+                    "auth_method": AuthMethod.OAUTH2_CCG
                 }
                 st.success("OAuth 2.0 configuration saved!")
         
@@ -156,7 +156,7 @@ def render_auth_sidebar():
                 st.session_state.auth_config = {
                     "clientID": client_id,
                     "clientSecret": client_secret,
-                    "auth_method": 'oauth2_ac'
+                    "auth_method": AuthMethod.OAUTH2_AC
                 }
                 st.success("OAuth 2.0 configuration saved!")
                 
@@ -167,7 +167,7 @@ def render_auth_sidebar():
             if st.button("Save Developer Token"):
                 st.session_state.auth_config = {
                     "developerToken": developer_token,
-                    "auth_method": 'developer_token'
+                    "auth_method": AuthMethod.DEVELOPER_TOKEN
                 }
                 st.success("Developer token saved!")
         
