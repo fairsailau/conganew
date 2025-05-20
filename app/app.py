@@ -17,18 +17,21 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
-# Try relative imports first (for package)
+# Import from box_ai_client first
 try:
-    from .auth import BoxAuthError, get_authenticated_client, AuthMethod
+    from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
 except ImportError:
-    # Fall back to direct imports if running directly
-    from auth import BoxAuthError, get_authenticated_client, AuthMethod
+    from box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
 
-# Import other modules with fallback
+# Keep old imports for backward compatibility
 try:
-    from .box_ai_client import BoxAIClient, BoxAIClientError
+    from .auth import get_authenticated_client
 except ImportError:
-    from box_ai_client import BoxAIClient, BoxAIClientError
+    try:
+        from auth import get_authenticated_client
+    except ImportError:
+        def get_authenticated_client(*args, **kwargs):
+            raise BoxAuthError("Authentication not configured")
 
 try:
     from .conversion_engine import ConversionEngine
