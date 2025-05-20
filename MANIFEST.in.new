@@ -1,6 +1,0 @@
-include README.md
-include requirements.txt
-include .streamlit/config.toml
-recursive-include app/templates *
-recursive-include app/schemas *
-recursive-include app/static *
