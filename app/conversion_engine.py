@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Any
 from boxsdk import Client
 from docx import Document
 
+# Use absolute import for BoxAIClient
 from app.box_ai_client import BoxAIClient
 
 

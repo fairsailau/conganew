@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from setuptools import setup, find_packages
 
 # Core dependencies that are safe to install on all platforms
@@ -14,7 +15,9 @@ install_requires = [
     'PyJWT==2.8.0',
     'openai==1.12.0',
     'pandas==2.2.1',
-    'numpy==1.26.4'
+    'numpy==1.26.4',
+    'typing-extensions>=4.0.0',  # Required for Python < 3.10
+    'importlib-metadata>=1.0.0'  # Required for Python < 3.8
 ]
 
 # Make tiktoken optional
@@ -25,14 +28,18 @@ optional_deps = {
 setup(
     name="conga_to_box_converter",
     version="0.1.0",
-    packages=find_packages(),
+    packages=find_packages(include=['app', 'app.*']),
     install_requires=install_requires,
     extras_require=optional_deps,
-    python_requires=">=3.9,<3.10",  # Python 3.9 specifically for best compatibility
+    python_requires=">=3.9,<3.10",
     entry_points={
         "console_scripts": [
-            "conga-to-box=app.app:main",
+            "conga-converter=app.app:main",
         ],
     },
     include_package_data=True,
+    package_data={
+        'app': ['*.json', '*.md', '*.txt'],
+    },
+    zip_safe=False,
 )

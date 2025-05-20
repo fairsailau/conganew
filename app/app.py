@@ -17,38 +17,13 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
-from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
-
-# Keep old imports for backward compatibility
-try:
-    from .conversion_engine import ConversionEngine
-except ImportError:
-    from conversion_engine import ConversionEngine
-
-try:
-    from .exporter import DocxExporter
-except ImportError:
-    from exporter import DocxExporter
-
-try:
-    from .parser import CongaTemplateParser
-except ImportError:
-    from parser import CongaTemplateParser
-
-try:
-    from .prompt_builder import PromptBuilder, ConversionContext
-except ImportError:
-    from prompt_builder import PromptBuilder, ConversionContext
-
-try:
-    from .query_loader import CongaQueryLoader
-except ImportError:
-    from query_loader import CongaQueryLoader
-
-try:
-    from .response_parser import AIResponseParser
-except ImportError:
-    from response_parser import AIResponseParser
+from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+from app.conversion_engine import ConversionEngine
+from app.exporter import DocxExporter
+from app.parser import CongaTemplateParser
+from app.prompt_builder import PromptBuilder, ConversionContext
+from app.query_loader import CongaQueryLoader
+from app.response_parser import AIResponseParser
 
 try:
     from .schema_loader import JSONSchemaLoader

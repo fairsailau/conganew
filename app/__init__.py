@@ -7,8 +7,12 @@ including parsing, conversion, validation, and export functionality.
 
 # Import key components to make them available at the package level
 from .parser import CongaTemplateParser
-from .converter import ConversionEngine
-from .validator import ValidationEngine
+from .conversion_engine import ConversionEngine
+from .exporter import DocxExporter
+from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+from .prompt_builder import PromptBuilder, ConversionContext
+from .query_loader import CongaQueryLoader
+from .response_parser import AIResponseParser
 from .exporter import DocxExporter
 from .box_ai_client import BoxAIClient
 from .schema_loader import JSONSchemaLoader
