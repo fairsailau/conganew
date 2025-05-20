@@ -21,15 +21,6 @@ from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMeth
 
 # Keep old imports for backward compatibility
 try:
-    from .auth import get_authenticated_client
-except ImportError:
-    try:
-        from auth import get_authenticated_client
-    except ImportError:
-        def get_authenticated_client(*args, **kwargs):
-            raise BoxAuthError("Authentication not configured")
-
-try:
     from .conversion_engine import ConversionEngine
 except ImportError:
     from conversion_engine import ConversionEngine
@@ -74,16 +65,8 @@ try:
 except ImportError:
     from validation_engine import ValidationEngine
 
-# Authentication settings
-AUTH_CONFIG_FILE = "config/box_auth.json"  # Path to your authentication config file
-
-
 def initialize_session_state():
     """Initialize session state variables"""
-    if 'auth_config' not in st.session_state:
-        st.session_state.auth_config = {}
-    if 'auth_method' not in st.session_state:
-        st.session_state.auth_method = None
     if 'schema_data' not in st.session_state:
         st.session_state.schema_data = None
     if 'conversion_results' not in st.session_state:
@@ -97,21 +80,10 @@ def initialize_session_state():
     if 'processing' not in st.session_state:
         st.session_state.processing = False
 
-
 def get_auth_config():
     """Get authentication configuration from Streamlit Secrets"""
     if 'BOX_DEVELOPER_TOKEN' not in st.secrets:
-        st.error("Please configure the Box Developer Token in Streamlit Secrets")
-        st.markdown("""
-        ### How to configure:
-        1. Click the hamburger menu (☰) in the top-right corner
-        2. Select "Settings"
-        3. Click on "Secrets"
-        4. Add your Box Developer Token:
-        ```
-        BOX_DEVELOPER_TOKEN = "your_developer_token_here"
-        ```
-        """)
+        st.error("Box Developer Token not found in Streamlit Secrets")
         st.stop()
     
     return {
@@ -119,31 +91,9 @@ def get_auth_config():
         'auth_method': AuthMethod.DEVELOPER_TOKEN
     }
 
-def render_auth_status():
-    """Show authentication status in the sidebar"""
+def render_sidebar():
+    """Render the sidebar with configuration options"""
     with st.sidebar:
-        st.header("Authentication")
-        
-        if 'BOX_DEVELOPER_TOKEN' not in st.secrets:
-            st.error("Authentication not configured")
-            st.markdown("""
-            Please configure your Box Developer Token in the Streamlit Secrets.
-            
-            1. Click the ☰ menu in the top-right corner
-            2. Select "Settings"
-            3. Click on "Secrets"
-            4. Add your token:
-            ```
-            BOX_DEVELOPER_TOKEN = "your_token_here"
-            ```
-            """)
-            st.stop()
-        
-        st.success("✅ Developer token configured")
-        
-        if st.button("View Authentication Status"):
-            st.code("Developer token: ************" + st.secrets['BOX_DEVELOPER_TOKEN'][-4:])
-        
         # Schema upload
         st.subheader("Schema Configuration")
         schema_file = st.file_uploader(
@@ -164,7 +114,7 @@ def render_auth_status():
         use_ai = st.checkbox(
             "Enable AI-assisted conversion",
             value=True,
-            help="Use Box AI for complex conversions (requires authentication)"
+            help="Use Box AI for complex conversions"
         )
         
         validate_output = st.checkbox(
@@ -174,7 +124,6 @@ def render_auth_status():
         )
         
         return use_ai, validate_output
-
 
 def main():
     """Main application function."""
@@ -188,16 +137,52 @@ def main():
     # Initialize session state
     initialize_session_state()
     
-    # Show authentication status in sidebar
-    render_auth_status()
+    # Show configuration in sidebar
+    use_ai, validate_output = render_sidebar()
     
     # Get authentication config
     try:
         auth_config = get_auth_config()
-        st.session_state.auth_config = auth_config
     except Exception as e:
-        st.error(f"Authentication configuration error: {str(e)}")
+        st.error(f"Authentication error: {str(e)}")
         st.stop()
+    
+    # Main app UI
+    st.title("Conga to Box DocGen Converter")
+    
+    # File upload section
+    st.header("Upload Conga Template")
+    uploaded_file = st.file_uploader(
+        "Upload your Conga template (DOCX or ZIP)",
+        type=["docx", "zip"],
+        accept_multiple_files=False,
+        help="Upload a single DOCX file or a ZIP file containing multiple DOCX files"
+    )
+    
+    # Process button
+    if uploaded_file is not None and st.button("Convert to Box DocGen"):
+        with st.spinner("Processing template..."):
+            try:
+                # Process the uploaded file
+                process_conversion(
+                    uploaded_file=uploaded_file,
+                    schema_data=st.session_state.schema_data,
+                    use_ai=use_ai,
+                    validate_output=validate_output,
+                    auth_config=auth_config
+                )
+                st.session_state.success = "Conversion completed successfully!"
+            except Exception as e:
+                st.session_state.error = f"Error during conversion: {str(e)}"
+                st.error(st.session_state.error)
+    
+    # Show success message if conversion was successful
+    if st.session_state.success:
+        st.success(st.session_state.success)
+    
+    # Show conversion results if available
+    if st.session_state.conversion_results:
+        show_conversion_results()
     
     # Main content area
     st.title("Conga to Box DocGen Template Converter")
