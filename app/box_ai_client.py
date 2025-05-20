@@ -17,8 +17,6 @@ class BoxAuthError(Exception):
     """Custom exception for Box authentication errors."""
     pass
 
-
-
 class AuthMethod:
     """Authentication method enum."""
     JWT = 'jwt'
