@@ -1,0 +1,19 @@
+[server]
+headless = true
+port = 8501
+
+[browser]
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[runner]
+fastReruns = true
+
+[client]
+showErrorDetails = true
+
+[theme]
+base = "light"
+
+[logger]
+level = "debug"
