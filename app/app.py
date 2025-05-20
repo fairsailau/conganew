@@ -98,132 +98,77 @@ def initialize_session_state():
         st.session_state.processing = False
 
 
-def render_auth_sidebar():
-    """Render the authentication configuration in the sidebar"""
+def get_auth_config():
+    """Get authentication configuration from Streamlit Secrets"""
+    if 'box' not in st.secrets:
+        st.error("Please configure the authentication in Streamlit Secrets")
+        st.stop()
+    
+    config = st.secrets['box']
+    auth_method = config.get('auth_method')
+    
+    if not auth_method:
+        st.error("No authentication method specified in secrets.toml")
+        st.stop()
+    
+    if auth_method == 'jwt':
+        try:
+            auth_config = json.loads(config.get('config', '{}'))
+            auth_config['auth_method'] = AuthMethod.JWT
+            return auth_config
+        except json.JSONDecodeError:
+            st.error("Invalid JSON configuration for JWT")
+            st.stop()
+    
+    elif auth_method == 'oauth2_ccg':
+        return {
+            'clientID': config.get('client_id'),
+            'clientSecret': config.get('client_secret'),
+            'enterpriseID': config.get('enterprise_id'),
+            'auth_method': AuthMethod.OAUTH2_CCG
+        }
+    
+    elif auth_method == 'developer_token':
+        return {
+            'developer_token': config.get('developer_token'),
+            'auth_method': AuthMethod.DEVELOPER_TOKEN
+        }
+    
+    else:
+        st.error(f"Unsupported authentication method: {auth_method}")
+        st.stop()
+
+def render_auth_status():
+    """Show authentication status in the sidebar"""
     with st.sidebar:
         st.header("Authentication")
         
-        # Define the available authentication methods
-        auth_methods = [
-            "JWT (Server Authentication)", 
-            "OAuth 2.0 (Client Credentials)", 
-            "OAuth 2.0 (Authorization Code)",
-            "Developer Token (Testing)"
-        ]
-        
-        # Initialize auth_method in session state if it doesn't exist
-        if 'auth_method' not in st.session_state:
-            st.session_state.auth_method = auth_methods[0]  # Default to first method
-        
-        # Authentication method selection
-        auth_method = st.radio(
-            "Authentication Method",
-            auth_methods,
-            index=auth_methods.index(st.session_state.auth_method) if st.session_state.auth_method in auth_methods else 0,
-            key="auth_method_selector"
-        )
-        
-        # Update session state when auth method changes
-        st.session_state.auth_method = auth_method
-        
-        # Authentication configuration based on method
-        if auth_method == "JWT (Server Authentication)":
-            st.session_state.auth_method_enum = AuthMethod.JWT
-            config_json = st.text_area(
-                "Paste your Box JWT Configuration (JSON)",
-                height=200,
-                help="Paste the contents of your Box JWT config.json file"
-            )
-            
-            if st.button("Save JWT Config"):
-                try:
-                    st.session_state.auth_config = json.loads(config_json)
-                    st.session_state.auth_config['auth_method'] = AuthMethod.JWT
-                    st.success("JWT configuration saved!")
-                except json.JSONDecodeError as e:
-                    st.error(f"Invalid JSON: {str(e)}")
-        
-        elif auth_method == "OAuth 2.0 (Client Credentials)":
-            st.session_state.auth_method_enum = AuthMethod.OAUTH2_CCG
-            client_id = st.text_input("Client ID")
-            client_secret = st.text_input("Client Secret", type="password")
-            enterprise_id = st.text_input("Enterprise ID")
-            
-            if st.button("Save OAuth 2.0 Config"):
-                st.session_state.auth_config = {
-                    "clientID": client_id,
-                    "clientSecret": client_secret,
-                    "enterpriseID": enterprise_id,
-                    "auth_method": AuthMethod.OAUTH2_CCG
-                }
-                st.success("OAuth 2.0 configuration saved!")
-        
-        elif auth_method == "OAuth 2.0 (Authorization Code)":
-            st.session_state.auth_method_enum = AuthMethod.OAUTH2_AC
-            client_id = st.text_input("Client ID")
-            client_secret = st.text_input("Client Secret", type="password")
-            
-            if st.button("Save OAuth 2.0 Config"):
-                st.session_state.auth_config = {
-                    "clientID": client_id,
-                    "clientSecret": client_secret,
-                    "auth_method": AuthMethod.OAUTH2_AC
-                }
-                st.success("OAuth 2.0 configuration saved!")
-                
-        else:  # Developer Token
-            st.session_state.auth_method_enum = AuthMethod.DEVELOPER_TOKEN
-            
-            # Add help text and info about developer tokens
+        if 'box' not in st.secrets:
+            st.error("Authentication not configured")
             st.markdown("""
-            **Developer Token**  
-            Generate a developer token from the [Box Developer Console](https://app.box.com/developers/console).
-            Note: Developer tokens are only valid for 60 minutes.
+            Please configure authentication in `secrets.toml`:
+            ```toml
+            [box]
+            auth_method = "developer_token"  # or "jwt" or "oauth2_ccg"
+            developer_token = "your_token_here"
+            ```
+            For more details, see [Streamlit Secrets Management](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
             """)
+            st.stop()
+        
+        auth_method = st.secrets['box'].get('auth_method', 'not configured')
+        st.success(f"Authenticated using: {auth_method.upper()}")
+        
+        if st.button("View Authentication Info", key="view_auth_info"):
+            st.json({k: "***" if "token" in k.lower() or "secret" in k.lower() or "key" in k.lower() else v 
+                   for k, v in st.secrets['box'].items()})
             
-            # Add a more prominent input field
-            developer_token = st.text_input(
-                "Developer Token",
-                type="password",
-                placeholder="Enter your Box developer token",
-                help="A valid Box developer token is required for API access"
-            )
-            
-            # Add validation and feedback
-            if developer_token:
-                if len(developer_token) < 10:
-                    st.warning("Developer token appears to be too short. Please check your token.")
-            
-            if st.button("Save Developer Token", key="save_dev_token"):
-                if not developer_token:
-                    st.error("Please enter a developer token")
-                elif len(developer_token) < 10:
-                    st.error("Invalid developer token. The token is too short.")
-                else:
-                    try:
-                        # Test the token by creating a client
-                        test_client = BoxAIClient({
-                            "developerToken": developer_token,
-                            "auth_method": AuthMethod.DEVELOPER_TOKEN
-                        })
-                        
-                        # If we get here, authentication was successful
-                        st.session_state.auth_config = {
-                            "developerToken": developer_token,
-                            "auth_method": AuthMethod.DEVELOPER_TOKEN
-                        }
-                        
-                        # Show success message with user info if available
-                        user_info = getattr(st.session_state, 'authenticated_user', None)
-                        if user_info:
-                            st.success(f"✅ Successfully authenticated as {user_info.get('name', 'Unknown User')} ({user_info.get('login', 'N/A')})")
-                        else:
-                            st.success("✅ Developer token saved and verified!")
-                            
-                    except BoxAuthError as e:
-                        st.error(f"Authentication failed: {str(e)}")
-                    except Exception as e:
-                        st.error(f"An error occurred: {str(e)}")
+            # Show user info if available in session state
+            user_info = getattr(st.session_state, 'authenticated_user', None)
+            if user_info:
+                st.success(f"✅ Successfully authenticated as {user_info.get('name', 'Unknown User')} ({user_info.get('login', 'N/A')})")
+            else:
+                st.success("✅ Authentication configured")
         
         # Schema upload
         st.subheader("Schema Configuration")
@@ -258,22 +203,28 @@ def render_auth_sidebar():
 
 
 def main():
-    """
-    Main Streamlit application
-    """
+    """Main application function."""
     st.set_page_config(
         page_title="Conga to Box DocGen Converter",
-        page_icon="📄",
+        page_icon="🔄",
         layout="wide",
         initial_sidebar_state="expanded"
     )
-
+    
     # Initialize session state
     initialize_session_state()
-
-    # Render the sidebar with authentication options
-    use_ai, validate_output = render_auth_sidebar()
-
+    
+    # Show authentication status in sidebar
+    render_auth_status()
+    
+    # Get authentication config
+    try:
+        auth_config = get_auth_config()
+        st.session_state.auth_config = auth_config
+    except Exception as e:
+        st.error(f"Authentication configuration error: {str(e)}")
+        st.stop()
+    
     # Main content area
     st.title("Conga to Box DocGen Template Converter")
     st.markdown("""
