@@ -103,21 +103,23 @@ def render_auth_sidebar():
     with st.sidebar:
         st.header("Authentication")
         
+        # Define the available authentication methods
+        auth_methods = [
+            "JWT (Server Authentication)", 
+            "OAuth 2.0 (Client Credentials)", 
+            "OAuth 2.0 (Authorization Code)",
+            "Developer Token (Testing)"
+        ]
+        
         # Initialize auth_method in session state if it doesn't exist
         if 'auth_method' not in st.session_state:
-            st.session_state.auth_method = "JWT (Server Authentication)"
+            st.session_state.auth_method = auth_methods[0]  # Default to first method
         
         # Authentication method selection
         auth_method = st.radio(
             "Authentication Method",
-            ["JWT (Server Authentication)", 
-             "OAuth 2.0 (Client Credentials)", 
-             "OAuth 2.0 (Authorization Code)",
-             "Developer Token (Testing)"],
-            index=["JWT (Server Authentication)", 
-                  "OAuth 2.0 (Client Credentials)", 
-                  "OAuth 2.0 (Authorization Code)",
-                  "Developer Token (Testing)"].index(st.session_state.get('auth_method', "JWT (Server Authentication)")),
+            auth_methods,
+            index=auth_methods.index(st.session_state.auth_method) if st.session_state.auth_method in auth_methods else 0,
             key="auth_method_selector"
         )
         
