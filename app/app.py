@@ -20,17 +20,42 @@ from boxsdk.exception import BoxException
 # Import in the order of dependency to avoid circular imports
 
 # First, import modules that don't have internal dependencies
-from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
-from app.prompt_builder import PromptBuilder, ConversionContext
-from app.response_parser import AIResponseParser
+try:
+    from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+except ImportError:
+    from box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+
+try:
+    from app.prompt_builder import PromptBuilder, ConversionContext
+except ImportError:
+    from prompt_builder import PromptBuilder, ConversionContext
+
+try:
+    from app.response_parser import AIResponseParser
+except ImportError:
+    from response_parser import AIResponseParser
 
 # Then import modules that might depend on the above
-from app.exporter import DocxExporter
-from app.query_loader import CongaQueryLoader
-from app.parser import CongaTemplateParser
+try:
+    from app.exporter import DocxExporter
+except ImportError:
+    from exporter import DocxExporter
+
+try:
+    from app.query_loader import CongaQueryLoader
+except ImportError:
+    from query_loader import CongaQueryLoader
+
+try:
+    from app.parser import CongaTemplateParser
+except ImportError:
+    from parser import CongaTemplateParser
 
 # Import conversion_engine last as it might depend on other modules
-from app.conversion_engine import ConversionEngine
+try:
+    from app.conversion_engine import ConversionEngine
+except ImportError:
+    from conversion_engine import ConversionEngine
 
 try:
     from .schema_loader import JSONSchemaLoader

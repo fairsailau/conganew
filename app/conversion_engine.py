@@ -2,27 +2,37 @@
 Conversion engine for transforming Conga templates to Box DocGen format.
 """
 from __future__ import annotations
-from typing import Dict, List, Optional, Any, TYPE_CHECKING, Union
+from typing import Dict, List, Optional, Any, Type, TypeVar, TYPE_CHECKING
 
 from boxsdk import Client
 from docx import Document
 
-# Use string type hints to avoid circular imports
-BoxAIClientType = Any
-if TYPE_CHECKING:
+# Define a type variable for BoxAIClient
+BoxAIClientType = TypeVar('BoxAIClientType', bound=Any)
+
+# Use string literals for type hints to avoid importing at module level
+BoxAIClientClass = Type['BoxAIClientType']
+
+# Lazy import pattern
+def get_box_ai_client() -> BoxAIClientClass:
     from app.box_ai_client import BoxAIClient
-    BoxAIClientType = BoxAIClient
+    return BoxAIClient
 
 
 class ConversionEngine:
     """Engine for converting Conga templates to Box DocGen format."""
     
-    def __init__(self, box_ai_client: Optional[BoxAIClientType] = None):
+    def __init__(self, box_ai_client: Optional[Any] = None):
         """Initialize the conversion engine.
         
         Args:
             box_ai_client: Optional BoxAIClient instance for AI-powered conversions
         """
+        # Import here to avoid circular imports
+        if box_ai_client is not None:
+            BoxAIClient = get_box_ai_client()
+            if not isinstance(box_ai_client, BoxAIClient):
+                raise TypeError(f"box_ai_client must be an instance of BoxAIClient, got {type(box_ai_client).__name__}")
         self.box_ai_client = box_ai_client
     
     def convert_text(self, text: str) -> str:
