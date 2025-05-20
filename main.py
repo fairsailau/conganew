@@ -1,14 +1,18 @@
 """
 Main entry point for the Streamlit application
 """
-import sys
 import os
+import sys
 
-# Add the app directory to the Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the current directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-# Now import and run the app
+# Import and run the Streamlit app
 from app.app import main
 
 if __name__ == "__main__":
+    # Set the STREAMLIT_SERVER_HEADLESS environment variable
+    os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+    
+    # Run the Streamlit app
     main()
