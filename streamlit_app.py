@@ -1,5 +1,7 @@
 """
-Main entry point for the Streamlit application
+Streamlit application entry point
+
+This file is used by Streamlit Cloud to run the application.
 """
 import os
 import sys

@@ -1,11 +1,29 @@
 """
 Box AI API client for template conversion
 """
+import sys
+import os
 from typing import Dict, List, Any, Optional, Union, Tuple
 from boxsdk import Client
 from boxsdk.exception import BoxAPIException
 
-from .auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
+
+class BoxAIClientError(Exception):
+    """Base exception for Box AI client errors."""
+    pass
+
+
+class BoxAuthError(Exception):
+    """Custom exception for Box authentication errors."""
+    pass
+
+
+class AuthMethod:
+    """Authentication method enum."""
+    JWT = 'jwt'
+    OAUTH2_CCG = 'oauth2_ccg'  # Client Credentials Grant
+    OAUTH2_AC = 'oauth2_ac'    # Authorization Code
+    DEVELOPER_TOKEN = 'developer_token'  # Developer token for testing
 
 
 class BoxAIClient:
@@ -29,16 +47,66 @@ class BoxAIClient:
         Get an authenticated Box client
         
         Args:
-            config: Optional configuration dictionary or path to config file
+            config: Configuration dictionary with authentication details
             
         Returns:
             Authenticated Box Client
         """
-        from .auth import get_authenticated_client
-        try:
-            return get_authenticated_client(config)
-        except BoxAuthError as e:
-            raise BoxAuthError(f"Failed to authenticate with Box: {str(e)}")
+        from boxsdk import OAuth2, Client
+        
+        if not config:
+            raise BoxAuthError("No authentication configuration provided")
+            
+        auth_method = config.get('auth_method')
+        
+        if auth_method == AuthMethod.JWT:
+            from boxsdk import JWTAuth
+            try:
+                auth = JWTAuth.from_settings_dictionary(config)
+                return Client(auth)
+            except Exception as e:
+                raise BoxAuthError(f"JWT authentication failed: {str(e)}")
+            
+        elif auth_method in [AuthMethod.OAUTH2_CCG, AuthMethod.OAUTH2_AC]:
+            try:
+                oauth = OAuth2(
+                    client_id=config.get('clientID'),
+                    client_secret=config.get('clientSecret')
+                )
+                
+                if auth_method == AuthMethod.OAUTH2_CCG:
+                    # For Client Credentials Grant
+                    access_token, _ = oauth.authenticate_instance()
+                    return Client(oauth)
+                else:
+                    # For Authorization Code Grant
+                    auth_url, _ = oauth.get_authorization_url('http://localhost')
+                    st.warning(f'Please visit this URL to authorize this application: {auth_url}')
+                    auth_code = st.text_input('Enter the authorization code:')
+                    if auth_code:
+                        access_token, refresh_token = oauth.authenticate(auth_code)
+                        return Client(oauth)
+                    raise BoxAuthError("Authorization code is required")
+            except Exception as e:
+                raise BoxAuthError(f"OAuth 2.0 authentication failed: {str(e)}")
+                
+        elif auth_method == AuthMethod.DEVELOPER_TOKEN:
+            try:
+                developer_token = config.get('developerToken')
+                if not developer_token:
+                    raise BoxAuthError("Developer token is required")
+                    
+                oauth = OAuth2(
+                    client_id=None,  # Not needed for developer token
+                    client_secret=None,
+                    access_token=developer_token
+                )
+                return Client(oauth)
+            except Exception as e:
+                raise BoxAuthError(f"Developer token authentication failed: {str(e)}")
+            
+        else:
+            raise BoxAuthError(f"Unsupported authentication method: {auth_method}")
         
     def ask_ai(self, prompt: str, content: Optional[str] = None, 
                file_id: Optional[str] = None) -> Dict[str, Any]:

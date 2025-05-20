@@ -4,7 +4,13 @@ Validation engine for checking conversion quality
 import re
 from typing import Dict, List, Any, Optional
 import docx
-from box_ai_client import BoxAIClient
+
+try:
+    # For production
+    from .box_ai_client import BoxAIClient
+except ImportError:
+    # For development
+    from box_ai_client import BoxAIClient
 
 
 class ValidationEngine:

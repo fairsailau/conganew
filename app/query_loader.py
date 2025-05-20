@@ -1,4 +1,4 @@
-""
+"""
 Module for loading and processing Conga query files.
 """
 import re

@@ -1,10 +1,12 @@
-""
+"""
 Module for loading and validating JSON schemas for template conversion.
 """
 import json
 import os
 from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
+
+__all__ = ['JSONSchemaLoader']
 
 
 class JSONSchemaLoader:

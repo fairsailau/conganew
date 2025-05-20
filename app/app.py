@@ -17,17 +17,66 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
-from app.auth import BoxAuthError, get_authenticated_client, AuthMethod
-from app.box_ai_client import BoxAIClient, BoxAIClientError
-from app.conversion_engine import ConversionEngine
-from app.exporter import DocxExporter
-from app.parser import CongaTemplateParser
-from app.prompt_builder import PromptBuilder, ConversionContext
-from app.query_loader import CongaQueryLoader
-from app.response_parser import AIResponseParser
-from app.schema_loader import JSONSchemaLoader
-from app.template_generator import DocGenTemplateGenerator
-from app.validation_engine import ValidationEngine
+# Import from box_ai_client first
+try:
+    from .box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+except ImportError:
+    from box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
+
+# Keep old imports for backward compatibility
+try:
+    from .auth import get_authenticated_client
+except ImportError:
+    try:
+        from auth import get_authenticated_client
+    except ImportError:
+        def get_authenticated_client(*args, **kwargs):
+            raise BoxAuthError("Authentication not configured")
+
+try:
+    from .conversion_engine import ConversionEngine
+except ImportError:
+    from conversion_engine import ConversionEngine
+
+try:
+    from .exporter import DocxExporter
+except ImportError:
+    from exporter import DocxExporter
+
+try:
+    from .parser import CongaTemplateParser
+except ImportError:
+    from parser import CongaTemplateParser
+
+try:
+    from .prompt_builder import PromptBuilder, ConversionContext
+except ImportError:
+    from prompt_builder import PromptBuilder, ConversionContext
+
+try:
+    from .query_loader import CongaQueryLoader
+except ImportError:
+    from query_loader import CongaQueryLoader
+
+try:
+    from .response_parser import AIResponseParser
+except ImportError:
+    from response_parser import AIResponseParser
+
+try:
+    from .schema_loader import JSONSchemaLoader
+except ImportError:
+    from schema_loader import JSONSchemaLoader
+
+try:
+    from .template_generator import DocGenTemplateGenerator
+except ImportError:
+    from template_generator import DocGenTemplateGenerator
+
+try:
+    from .validation_engine import ValidationEngine
+except ImportError:
+    from validation_engine import ValidationEngine
 
 # Authentication settings
 AUTH_CONFIG_FILE = "config/box_auth.json"  # Path to your authentication config file
@@ -61,7 +110,8 @@ def render_auth_sidebar():
             "Authentication Method",
             ["JWT (Server Authentication)", 
              "OAuth 2.0 (Client Credentials)", 
-             "OAuth 2.0 (Authorization Code)"],
+             "OAuth 2.0 (Authorization Code)",
+             "Developer Token (Testing)"],
             index=0
         )
         
@@ -97,7 +147,7 @@ def render_auth_sidebar():
                 }
                 st.success("OAuth 2.0 configuration saved!")
         
-        else:  # OAuth 2.0 (Authorization Code)
+        elif auth_method == "OAuth 2.0 (Authorization Code)":
             st.session_state.auth_method = AuthMethod.OAUTH2_AC
             client_id = st.text_input("Client ID")
             client_secret = st.text_input("Client Secret", type="password")
@@ -109,6 +159,17 @@ def render_auth_sidebar():
                     "auth_method": 'oauth2_ac'
                 }
                 st.success("OAuth 2.0 configuration saved!")
+                
+        else:  # Developer Token
+            st.session_state.auth_method = AuthMethod.DEVELOPER_TOKEN
+            developer_token = st.text_input("Developer Token", type="password")
+            
+            if st.button("Save Developer Token"):
+                st.session_state.auth_config = {
+                    "developerToken": developer_token,
+                    "auth_method": 'developer_token'
+                }
+                st.success("Developer token saved!")
         
         # Schema upload
         st.subheader("Schema Configuration")
@@ -431,57 +492,71 @@ def preview_docx_from_path(file_path: str) -> None:
 if __name__ == "__main__":
     main()
 
-def show_documentation() -> None:
+def show_documentation():
     """Display documentation and examples for the template conversion."""
-    with st.expander("📚 Documentation & Examples"):
-        st.write("""
-        ## Conga to Box DocGen Converter
-        
-        This tool helps you convert Conga templates to Box DocGen format. Below are some examples
-        of common patterns and their Box DocGen equivalents.
-        """)
-        
-        with st.expander("🔗 Merge Field Mappings"):
-            st.code("""
-            # Merge Field Mappings
-            '&=Account.Name' -> 'account.name'
-            '&=Contact.Name' -> 'contact.name'
-            '&=Opportunity.Name' -> 'opportunity.name'
-            '&=Date.Today' -> '{{date now format="dd-MM-yyyy"}}'
-            """, language="markdown")
-        
-        with st.expander("⚡ Conditional Logic Mappings"):
-            st.code("""
-            # Equality Condition
-            {IF "{{field}}" = "value" "true_result" "false_result"}
-            ->
-            {{#eq field "value"}}true_result{{else}}false_result{{/eq}}
-            
-            # Greater Than Condition
-            {IF "{{field}}" > "value" "true_result" "false_result"}
-            ->
-            {{#gt field value}}true_result{{else}}false_result{{/gt}}
-            """, language="markdown")
-        
-        with st.expander("📊 Table Mappings"):
-            st.code("""
-            # Table Start
-            {TABLE Group=collection_name}
-            ->
-            {{#each collection_name}}
-            
-            # Table End
-            {END collection_name}
-            ->
-            {{/each}}
-            """, language="markdown")
-        
-        with st.expander("🔑 Authentication Methods"):
-            st.write("""
-            ### Supported Authentication Methods:
-            
-            1. **JWT (Server Authentication)**
-               - Requires service account credentials
+    st.write("## 📚 Documentation & Examples")
+    st.write("""
+    This tool helps you convert Conga templates to Box DocGen format. Below are some examples
+    of common patterns and their Box DocGen equivalents.
+    """)
+    
+    # Create tabs for different documentation sections
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔗 Merge Fields", 
+        "⚡ Conditionals", 
+        "📊 Tables", 
+        "🔑 Authentication"
+    ])
+    
+    # Merge Fields Tab
+    with tab1:
+        st.markdown("### Merge Field Mappings")
+        st.code(
+            """# Merge Field Mappings
+'&=Account.Name' -> 'account.name'
+'&=Contact.Name' -> 'contact.name'
+'&=Opportunity.Name' -> 'opportunity.name'
+'&=Date.Today' -> '{{date now format="dd-MM-yyyy"}}'""",
+            language="markdown"
+        )
+    
+    # Conditionals Tab
+    with tab2:
+        st.markdown("### Conditional Logic Mappings")
+        st.code(
+            """# Equality Condition
+{IF "{{field}}" = "value" "true_result" "false_result"}
+->
+{{#eq field "value"}}true_result{{else}}false_result{{/eq}}
+
+# Greater Than Condition
+{IF "{{field}}" > "value" "true_result" "false_result"}
+->
+{{#gt field value}}true_result{{else}}false_result{{/gt}}""",
+            language="markdown"
+        )
+    
+    # Tables Tab
+    with tab3:
+        st.markdown("### Table Mappings")
+        st.code(
+            """# Table Start
+{TABLE Group=collection_name}
+->
+{{#each collection_name}}
+
+# Table End
+{END collection_name}
+->
+{{/each}}""",
+            language="markdown"
+        )
+    
+    # Authentication Tab
+    with tab4:
+        st.markdown("### Authentication Methods")
+        st.write(
+            """#### Supported Authentication Methods:
                - Best for server-to-server communication
             
             2. **OAuth 2.0 with Client Credentials Grant**

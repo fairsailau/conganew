@@ -1,4 +1,4 @@
-""
+"""
 Module for generating Box DocGen templates from various sources.
 """
 from typing import Dict, List, Optional, Any, Union

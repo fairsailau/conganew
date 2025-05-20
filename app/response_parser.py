@@ -1,4 +1,4 @@
-""
+"""
 Module for parsing AI responses for template conversion.
 """
 import re
