@@ -103,6 +103,10 @@ def render_auth_sidebar():
     with st.sidebar:
         st.header("Authentication")
         
+        # Initialize auth_method in session state if it doesn't exist
+        if 'auth_method' not in st.session_state:
+            st.session_state.auth_method = "JWT (Server Authentication)"
+        
         # Authentication method selection
         auth_method = st.radio(
             "Authentication Method",
@@ -110,12 +114,19 @@ def render_auth_sidebar():
              "OAuth 2.0 (Client Credentials)", 
              "OAuth 2.0 (Authorization Code)",
              "Developer Token (Testing)"],
-            index=0
+            index=["JWT (Server Authentication)", 
+                  "OAuth 2.0 (Client Credentials)", 
+                  "OAuth 2.0 (Authorization Code)",
+                  "Developer Token (Testing)"].index(st.session_state.get('auth_method', "JWT (Server Authentication)")),
+            key="auth_method_selector"
         )
+        
+        # Update session state when auth method changes
+        st.session_state.auth_method = auth_method
         
         # Authentication configuration based on method
         if auth_method == "JWT (Server Authentication)":
-            st.session_state.auth_method = AuthMethod.JWT
+            st.session_state.auth_method_enum = AuthMethod.JWT
             config_json = st.text_area(
                 "Paste your Box JWT Configuration (JSON)",
                 height=200,
@@ -131,7 +142,7 @@ def render_auth_sidebar():
                     st.error(f"Invalid JSON: {str(e)}")
         
         elif auth_method == "OAuth 2.0 (Client Credentials)":
-            st.session_state.auth_method = AuthMethod.OAUTH2_CCG
+            st.session_state.auth_method_enum = AuthMethod.OAUTH2_CCG
             client_id = st.text_input("Client ID")
             client_secret = st.text_input("Client Secret", type="password")
             enterprise_id = st.text_input("Enterprise ID")
@@ -146,7 +157,7 @@ def render_auth_sidebar():
                 st.success("OAuth 2.0 configuration saved!")
         
         elif auth_method == "OAuth 2.0 (Authorization Code)":
-            st.session_state.auth_method = AuthMethod.OAUTH2_AC
+            st.session_state.auth_method_enum = AuthMethod.OAUTH2_AC
             client_id = st.text_input("Client ID")
             client_secret = st.text_input("Client Secret", type="password")
             
@@ -159,7 +170,7 @@ def render_auth_sidebar():
                 st.success("OAuth 2.0 configuration saved!")
                 
         else:  # Developer Token
-            st.session_state.auth_method = AuthMethod.DEVELOPER_TOKEN
+            st.session_state.auth_method_enum = AuthMethod.DEVELOPER_TOKEN
             
             # Add help text and info about developer tokens
             st.markdown("""

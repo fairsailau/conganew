@@ -101,28 +101,34 @@ class BoxAIClient:
                     raise BoxAuthError("Invalid developer token format. Please check your token and try again.")
                 
                 # For developer token, we can directly create a client with the token
-                # This is a simpler approach that works with just the token
+                oauth = OAuth2(
+                    client_id=None,
+                    client_secret=None,
+                    access_token=developer_token.strip()
+                )
+                
+                # Test the token by making a simple API call
+                client = Client(oauth)
                 try:
-                    oauth = OAuth2(
-                        client_id=None,
-                        client_secret=None,
-                        access_token=developer_token.strip()
-                    )
-                    
-                    # Test the token by making a simple API call
-                    client = Client(oauth)
+                    # Test the token by getting current user info
                     user = client.user(user_id='me').get()
                     
-                    st.session_state.authenticated_user = {
-                        'name': user.name,
-                        'login': user.login,
-                        'status': 'active'
-                    }
+                    # Store user info in session state if available
+                    if 'streamlit' in sys.modules:
+                        import streamlit as st
+                        st.session_state.authenticated_user = {
+                            'name': user.name,
+                            'login': user.login,
+                            'status': 'active'
+                        }
                     
                     return client
                     
+                except BoxAPIException as e:
+                    raise BoxAuthError(f"Failed to authenticate with the provided developer token. Error: {e.status}, Message: {e.message}")
+                    
                 except Exception as e:
-                    raise BoxAuthError(f"Failed to authenticate with the provided developer token. Please check if the token is valid and has not expired.")
+                    raise BoxAuthError(f"Developer token authentication failed: {str(e)}")
                     
             except BoxAuthError:
                 raise  # Re-raise BoxAuthError as is
