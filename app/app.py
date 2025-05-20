@@ -18,14 +18,18 @@ from boxsdk.exception import BoxException
 
 # Local application imports
 # Import in the order of dependency to avoid circular imports
-from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
 
-# Import other modules after the ones they depend on
+# First, import modules that don't have internal dependencies
+from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
 from app.prompt_builder import PromptBuilder, ConversionContext
 from app.response_parser import AIResponseParser
+
+# Then import modules that might depend on the above
 from app.exporter import DocxExporter
 from app.query_loader import CongaQueryLoader
 from app.parser import CongaTemplateParser
+
+# Import conversion_engine last as it might depend on other modules
 from app.conversion_engine import ConversionEngine
 
 try:
