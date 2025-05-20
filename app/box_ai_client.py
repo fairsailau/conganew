@@ -1,11 +1,18 @@
 """
 Box AI API client for template conversion
 """
+import sys
+import os
 from typing import Dict, List, Any, Optional, Union, Tuple
 from boxsdk import Client
 from boxsdk.exception import BoxAPIException
 
-from .auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
+try:
+    # For production
+    from .auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
+except ImportError:
+    # For development
+    from auth import BoxAuthError, load_auth_config, BoxAuthenticator, AuthMethod
 
 
 class BoxAIClient:
