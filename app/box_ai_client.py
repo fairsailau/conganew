@@ -13,39 +13,17 @@ class BoxAIClientError(Exception):
     pass
 
 
-try:
-    # For production
-    from .auth import BoxAuthError, get_authenticated_client, AuthMethod
-except ImportError:
-    # For development
-    try:
-        from auth import BoxAuthError, get_authenticated_client, AuthMethod
-    except ImportError:
-        # Fallback if auth module is not available
-        class BoxAuthError(Exception):
-            """Custom exception for Box authentication errors."""
-            pass
+class BoxAuthError(Exception):
+    """Custom exception for Box authentication errors."""
+    pass
 
-        class AuthMethod:
-            """Authentication method enum."""
-            JWT = 'jwt'
-            OAUTH2_CCG = 'oauth2_ccg'  # Client Credentials Grant
-            OAUTH2_AC = 'oauth2_ac'    # Authorization Code
-            DEVELOPER_TOKEN = 'developer_token'  # Developer token for testing
 
-        def get_authenticated_client(auth_config):
-            """
-            Get an authenticated Box client.
-            
-            Args:
-                auth_config: Authentication configuration
-                
-            Returns:
-                Authenticated Box client
-            """
-            # This is a placeholder implementation
-            # In a real implementation, this would authenticate with Box
-            raise BoxAuthError("Authentication not configured")
+class AuthMethod:
+    """Authentication method enum."""
+    JWT = 'jwt'
+    OAUTH2_CCG = 'oauth2_ccg'  # Client Credentials Grant
+    OAUTH2_AC = 'oauth2_ac'    # Authorization Code
+    DEVELOPER_TOKEN = 'developer_token'  # Developer token for testing
 
 
 class BoxAIClient:
