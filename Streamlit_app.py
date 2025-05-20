@@ -1,15 +1,17 @@
+#!/usr/bin/env python3
 """
-Streamlit application entry point
+This is a simple redirector script that imports and runs the main Streamlit app.
+It's needed for Streamlit Cloud deployment to find the entry point.
+"""
 
-This file is used by Streamlit Cloud to run the application.
-"""
 import os
 import sys
+from pathlib import Path
 
-# Add the current directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Add the app directory to the Python path
+sys.path.append(str(Path(__file__).parent))
 
-# Import and run the Streamlit app
+# Import the main app
 from app.app import main
 
 if __name__ == "__main__":

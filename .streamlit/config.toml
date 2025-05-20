@@ -1,6 +1,9 @@
 [server]
 headless = true
 port = 8501
+baseUrlPath = "/"
+enableCORS = false
+enableXsrfProtection = false
 
 [browser]
 serverAddress = "0.0.0.0"
@@ -8,6 +11,7 @@ serverPort = 8501
 
 [runner]
 fastReruns = true
+mainScriptPath = "app/app.py"
 
 [client]
 showErrorDetails = true
