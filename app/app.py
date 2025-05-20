@@ -477,57 +477,71 @@ def preview_docx_from_path(file_path: str) -> None:
 if __name__ == "__main__":
     main()
 
-def show_documentation() -> None:
+def show_documentation():
     """Display documentation and examples for the template conversion."""
-    with st.expander("📚 Documentation & Examples"):
-        st.write("""
-        ## Conga to Box DocGen Converter
-        
-        This tool helps you convert Conga templates to Box DocGen format. Below are some examples
-        of common patterns and their Box DocGen equivalents.
-        """)
-        
-        with st.expander("🔗 Merge Field Mappings"):
-            st.code("""
-            # Merge Field Mappings
-            '&=Account.Name' -> 'account.name'
-            '&=Contact.Name' -> 'contact.name'
-            '&=Opportunity.Name' -> 'opportunity.name'
-            '&=Date.Today' -> '{{date now format="dd-MM-yyyy"}}'
-            """, language="markdown")
-        
-        with st.expander("⚡ Conditional Logic Mappings"):
-            st.code("""
-            # Equality Condition
-            {IF "{{field}}" = "value" "true_result" "false_result"}
-            ->
-            {{#eq field "value"}}true_result{{else}}false_result{{/eq}}
-            
-            # Greater Than Condition
-            {IF "{{field}}" > "value" "true_result" "false_result"}
-            ->
-            {{#gt field value}}true_result{{else}}false_result{{/gt}}
-            """, language="markdown")
-        
-        with st.expander("📊 Table Mappings"):
-            st.code("""
-            # Table Start
-            {TABLE Group=collection_name}
-            ->
-            {{#each collection_name}}
-            
-            # Table End
-            {END collection_name}
-            ->
-            {{/each}}
-            """, language="markdown")
-        
-        with st.expander("🔑 Authentication Methods"):
-            st.write("""
-            ### Supported Authentication Methods:
-            
-            1. **JWT (Server Authentication)**
-               - Requires service account credentials
+    st.write("## 📚 Documentation & Examples")
+    st.write("""
+    This tool helps you convert Conga templates to Box DocGen format. Below are some examples
+    of common patterns and their Box DocGen equivalents.
+    """)
+    
+    # Create tabs for different documentation sections
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔗 Merge Fields", 
+        "⚡ Conditionals", 
+        "📊 Tables", 
+        "🔑 Authentication"
+    ])
+    
+    # Merge Fields Tab
+    with tab1:
+        st.markdown("### Merge Field Mappings")
+        st.code(
+            """# Merge Field Mappings
+'&=Account.Name' -> 'account.name'
+'&=Contact.Name' -> 'contact.name'
+'&=Opportunity.Name' -> 'opportunity.name'
+'&=Date.Today' -> '{{date now format="dd-MM-yyyy"}}'""",
+            language="markdown"
+        )
+    
+    # Conditionals Tab
+    with tab2:
+        st.markdown("### Conditional Logic Mappings")
+        st.code(
+            """# Equality Condition
+{IF "{{field}}" = "value" "true_result" "false_result"}
+->
+{{#eq field "value"}}true_result{{else}}false_result{{/eq}}
+
+# Greater Than Condition
+{IF "{{field}}" > "value" "true_result" "false_result"}
+->
+{{#gt field value}}true_result{{else}}false_result{{/gt}}""",
+            language="markdown"
+        )
+    
+    # Tables Tab
+    with tab3:
+        st.markdown("### Table Mappings")
+        st.code(
+            """# Table Start
+{TABLE Group=collection_name}
+->
+{{#each collection_name}}
+
+# Table End
+{END collection_name}
+->
+{{/each}}""",
+            language="markdown"
+        )
+    
+    # Authentication Tab
+    with tab4:
+        st.markdown("### Authentication Methods")
+        st.write(
+            """#### Supported Authentication Methods:
                - Best for server-to-server communication
             
             2. **OAuth 2.0 with Client Credentials Grant**
