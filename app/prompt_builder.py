@@ -1,4 +1,4 @@
-""
+"""
 Module for building prompts for AI-assisted template conversion.
 """
 from typing import Dict, List, Optional, Any
@@ -53,7 +53,7 @@ Key conversion rules:
 Always maintain the original document structure and formatting as much as possible.
 """
 
-        user_prompt = f"""Please convert the following Conga template to Box DocGen format.
+        user_prompt = """Please convert the following Conga template to Box DocGen format.
 
 CONGA TEMPLATE:
 {template_text}
@@ -62,7 +62,7 @@ QUERY (if any):
 {query_text}
 
 SCHEMA FIELDS (if any):
-{schema_fields}
+- {schema_fields}
 
 CUSTOM INSTRUCTIONS:
 {custom_instructions}
@@ -70,10 +70,11 @@ CUSTOM INSTRUCTIONS:
 CONVERTED TEMPLATE:"""
 
         # Format the user prompt with the actual context
+        schema_fields = "\n- ".join(self.context.schema_data.keys()) if self.context.schema_data else ""
         user_prompt = user_prompt.format(
             template_text=self.context.template_text,
             query_text=self.context.query_text or "N/A",
-            schema_fields="\n- ".join([""] + (self.context.schema_data.keys() if self.context.schema_data else [])),
+            schema_fields=schema_fields,
             custom_instructions=self.context.custom_instructions or "None"
         )
         
