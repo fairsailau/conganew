@@ -1,201 +1,205 @@
-""
-Module for loading and validating JSON schemas for template conversion.
 """
-import json
-import os
-from typing import Dict, List, Optional, Any, Union
-from pathlib import Path
+Validation engine for checking conversion quality
+"""
+import re
+from typing import Dict, List, Any, Optional
+import docx
+
+try:
+    # For production
+    from .box_ai_client import BoxAIClient
+except ImportError:
+    # For development
+    from box_ai_client import BoxAIClient
 
 
-class JSONSchemaLoader:
-    """Loader for JSON schemas used in template validation."""
+class ValidationEngine:
+    """
+    Engine for validating the conversion from Conga to Box DocGen
+    """
     
-    def __init__(self, schema_data: Optional[Union[Dict, str, Path]] = None):
-        """Initialize the schema loader.
-        
-        Args:
-            schema_data: Schema data as a dict, JSON string, or file path
+    def __init__(self, box_ai_client: Optional[BoxAIClient] = None):
         """
-        self.schema = {}
-        self._load_schema(schema_data)
-    
-    def _load_schema(self, schema_data: Optional[Union[Dict, str, Path]]) -> None:
-        """Load schema from various input types.
+        Initialize the validation engine
         
         Args:
-            schema_data: Schema data as a dict, JSON string, or file path
+            box_ai_client: BoxAIClient instance for AI-assisted validation
         """
-        if not schema_data:
-            return
-            
-        try:
-            if isinstance(schema_data, dict):
-                self.schema = schema_data
-            elif isinstance(schema_data, (str, Path)):
-                # Try to load from file if path exists
-                path = Path(schema_data)
-                if path.exists() and path.is_file():
-                    with open(path, 'r', encoding='utf-8') as f:
-                        self.schema = json.load(f)
-                else:
-                    # Try to parse as JSON string
-                    self.schema = json.loads(str(schema_data))
-        except (json.JSONDecodeError, TypeError) as e:
-            raise ValueError(f"Invalid schema data: {str(e)}")
-    
-    def validate_against_schema(self, data: Dict) -> Dict[str, Any]:
-        """Validate data against the loaded schema.
+        self.box_ai_client = box_ai_client
+        
+    def validate_conversion(self, original_content: str, converted_content: str, 
+                           original_tags: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Validate the conversion by comparing original and converted templates
         
         Args:
-            data: Data to validate
+            original_content: Original Conga template content
+            converted_content: Converted Box DocGen template content
+            original_tags: List of original Conga tags
             
         Returns:
-            Dict with validation results
+            Dictionary containing validation results
         """
-        if not self.schema:
+        validation_results = {
+            'syntax_valid': self._check_syntax(converted_content),
+            'completeness': self._check_completeness(original_tags, converted_content),
+            'errors': [],
+            'warnings': []
+        }
+        
+        # Check for common errors
+        self._check_for_errors(converted_content, validation_results)
+        
+        # Use AI for additional validation if available
+        if self.box_ai_client:
+            ai_validation = self._ai_validation(original_content, converted_content)
+            if ai_validation:
+                validation_results['ai_validation'] = ai_validation
+        
+        return validation_results
+        
+    def _check_syntax(self, content: str) -> bool:
+        """
+        Check if the converted template has valid Box DocGen syntax
+        
+        Args:
+            content: Converted template content
+            
+        Returns:
+            True if syntax is valid, False otherwise
+        """
+        # Check for balanced handlebars
+        open_tags = len(re.findall(r'\{\{[^}]+', content))
+        close_tags = len(re.findall(r'\}\}', content))
+        
+        if open_tags != close_tags:
+            return False
+        
+        # Check for balanced conditional blocks
+        conditionals = {
+            '#if': '/if',
+            '#eq': '/eq',
+            '#gt': '/gt',
+            '#lt': '/lt',
+            '#each': '/each'
+        }
+        
+        for open_tag, close_tag in conditionals.items():
+            open_count = len(re.findall(r'\{\{' + open_tag + r'[^}]+\}\}', content))
+            close_count = len(re.findall(r'\{\{' + close_tag + r'\}\}', content))
+            
+            if open_count != close_count:
+                return False
+        
+        return True
+        
+    def _check_completeness(self, original_tags: List[Dict[str, Any]], 
+                           converted_content: str) -> float:
+        """
+        Check if all Conga tags have been converted
+        
+        Args:
+            original_tags: List of original Conga tags
+            converted_content: Converted template content
+            
+        Returns:
+            Completeness score (0.0 to 1.0)
+        """
+        total_tags = len(original_tags)
+        if total_tags == 0:
+            return 1.0
+            
+        # Count how many original tags are no longer present
+        converted_tags = 0
+        
+        for tag in original_tags:
+            if tag['full_match'] not in converted_content:
+                converted_tags += 1
+        
+        return converted_tags / total_tags
+    
+    def _check_for_errors(self, content: str, results: Dict[str, Any]) -> None:
+        """
+        Check for common errors in the converted template
+        
+        Args:
+            content: Converted template content
+            results: Dictionary to store errors and warnings
+        """
+        # Check for unconverted Conga tags
+        conga_patterns = [
+            (r'&=[A-Za-z0-9._]+', 'Unconverted Conga merge field'),
+            (r'\{IF\s+', 'Unconverted Conga conditional'),
+            (r'\{TABLE\s+', 'Unconverted Conga table start'),
+            (r'\{END\s+', 'Unconverted Conga table end')
+        ]
+        
+        for pattern, error_msg in conga_patterns:
+            matches = re.findall(pattern, content)
+            if matches:
+                results['errors'].append({
+                    'type': error_msg,
+                    'instances': matches
+                })
+        
+        # Check for malformed Box DocGen tags
+        box_patterns = [
+            (r'\{\{[^}]*\{\{', 'Nested Box DocGen tags'),
+            (r'\}\}[^{]*\}\}', 'Consecutive closing tags'),
+            (r'\{\{#[^}]+\}\}(?:(?!\{\{\/[^}]+\}\}).)*$', 'Unclosed conditional block')
+        ]
+        
+        for pattern, error_msg in box_patterns:
+            matches = re.findall(pattern, content)
+            if matches:
+                results['errors'].append({
+                    'type': error_msg,
+                    'instances': matches
+                })
+    
+    def _ai_validation(self, original: str, converted: str) -> Optional[Dict[str, Any]]:
+        """
+        Use Box AI to validate the conversion
+        
+        Args:
+            original: Original Conga template content
+            converted: Converted Box DocGen template content
+            
+        Returns:
+            Dictionary with AI validation results or None if not available
+        """
+        if not self.box_ai_client:
+            return None
+            
+        # Limit content size for API
+        original_sample = original[:2000] if len(original) > 2000 else original
+        converted_sample = converted[:2000] if len(converted) > 2000 else converted
+        
+        prompt = f"""
+        Compare these two templates and identify any issues or discrepancies:
+        
+        Original Conga template:
+        {original_sample}
+        
+        Converted Box DocGen template:
+        {converted_sample}
+        
+        Focus on:
+        1. Missing fields or tags
+        2. Incorrect syntax
+        3. Logic errors in conditionals
+        4. Table structure issues
+        
+        Return a JSON with these keys:
+        - issues: array of specific issues found
+        - quality_score: number from 0-10
+        - recommendations: array of suggestions to improve conversion
+        """
+        
+        response = self.box_ai_client.ask_ai(prompt, content=f"{original_sample}\n\n---\n\n{converted_sample}")
+        if 'answer' in response:
             return {
-                'is_valid': True,
-                'errors': [],
-                'warnings': [{'message': 'No schema loaded for validation'}]
+                'ai_analysis': response['answer']
             }
             
-        # This is a simplified validation - in a real implementation,
-        # you would use a proper JSON Schema validator like jsonschema
-        errors = []
-        
-        # Check required fields
-        required_fields = self.schema.get('required', [])
-        for field in required_fields:
-            if field not in data:
-                errors.append({
-                    'field': field,
-                    'message': f'Missing required field: {field}',
-                    'type': 'required_field_missing'
-                })
-        
-        # Check field types
-        properties = self.schema.get('properties', {})
-        for field, value in data.items():
-            if field not in properties:
-                continue
-                
-            field_schema = properties[field]
-            field_type = field_schema.get('type')
-            
-            if not field_type:
-                continue
-                
-            # Simple type checking
-            type_check = self._check_type(value, field_type)
-            if not type_check['valid']:
-                errors.append({
-                    'field': field,
-                    'message': f'Invalid type for {field}: expected {field_type}, got {type(value).__name__}',
-                    'type': 'invalid_type',
-                    'expected': field_type,
-                    'actual': type(value).__name__
-                })
-        
-        return {
-            'is_valid': len(errors) == 0,
-            'errors': errors,
-            'schema': self.schema
-        }
-    
-    def _check_type(self, value: Any, expected_type: Union[str, List[str]]) -> Dict[str, Any]:
-        """Check if a value matches the expected type.
-        
-        Args:
-            value: Value to check
-            expected_type: Expected type(s) as string or list of strings
-            
-        Returns:
-            Dict with validation result
-        """
-        if isinstance(expected_type, list):
-            # Check if any of the types match
-            for t in expected_type:
-                if self._check_single_type(value, t):
-                    return {'valid': True}
-            return {'valid': False}
-        else:
-            return {'valid': self._check_single_type(value, expected_type)}
-    
-    def _check_single_type(self, value: Any, type_str: str) -> bool:
-        """Check if a value matches a single type.
-        
-        Args:
-            value: Value to check
-            type_str: Type string ('string', 'number', 'integer', 'boolean', 'array', 'object')
-            
-        Returns:
-            bool: True if type matches, False otherwise
-        """
-        if type_str == 'string':
-            return isinstance(value, str)
-        elif type_str == 'number':
-            return isinstance(value, (int, float)) and not isinstance(value, bool)
-        elif type_str == 'integer':
-            return isinstance(value, int) and not isinstance(value, bool)
-        elif type_str == 'boolean':
-            return isinstance(value, bool)
-        elif type_str == 'array':
-            return isinstance(value, list)
-        elif type_str == 'object':
-            return isinstance(value, dict)
-        elif type_str == 'null':
-            return value is None
-        else:
-            # Unknown type - assume valid
-            return True
-    
-    def get_field_names(self) -> List[str]:
-        """Get all field names defined in the schema.
-        
-        Returns:
-            List of field names
-        """
-        return list(self.schema.get('properties', {}).keys())
-    
-    def get_field_type(self, field_name: str) -> Optional[str]:
-        """Get the type of a field.
-        
-        Args:
-            field_name: Name of the field
-            
-        Returns:
-            Field type as string, or None if field not found
-        """
-        field = self.schema.get('properties', {}).get(field_name, {})
-        return field.get('type') if field else None
-    
-    def get_field_description(self, field_name: str) -> Optional[str]:
-        """Get the description of a field.
-        
-        Args:
-            field_name: Name of the field
-            
-        Returns:
-            Field description, or None if not available
-        """
-        field = self.schema.get('properties', {}).get(field_name, {})
-        return field.get('description')
-    
-    def is_required(self, field_name: str) -> bool:
-        """Check if a field is required.
-        
-        Args:
-            field_name: Name of the field
-            
-        Returns:
-            bool: True if field is required, False otherwise
-        """
-        return field_name in self.schema.get('required', [])
-    
-    def get_schema(self) -> Dict:
-        """Get the loaded schema.
-        
-        Returns:
-            Dict containing the schema
-        """
-        return self.schema
+        return None
