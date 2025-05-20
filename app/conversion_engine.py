@@ -1,19 +1,21 @@
 """
 Conversion engine for transforming Conga templates to Box DocGen format.
 """
-from typing import Dict, List, Optional, Any
+from __future__ import annotations
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
 from boxsdk import Client
 from docx import Document
 
-# Use absolute import for BoxAIClient
-from app.box_ai_client import BoxAIClient
+# Use string type hints to avoid circular imports
+if TYPE_CHECKING:
+    from app.box_ai_client import BoxAIClient
 
 
 class ConversionEngine:
     """Engine for converting Conga templates to Box DocGen format."""
     
-    def __init__(self, box_ai_client: Optional[BoxAIClient] = None):
+    def __init__(self, box_ai_client: Optional['BoxAIClient'] = None):
         """Initialize the conversion engine.
         
         Args:

@@ -17,13 +17,16 @@ from boxsdk import Client
 from boxsdk.exception import BoxException
 
 # Local application imports
+# Import in the order of dependency to avoid circular imports
 from app.box_ai_client import BoxAIClient, BoxAIClientError, BoxAuthError, AuthMethod
-from app.conversion_engine import ConversionEngine
-from app.exporter import DocxExporter
-from app.parser import CongaTemplateParser
+
+# Import other modules after the ones they depend on
 from app.prompt_builder import PromptBuilder, ConversionContext
-from app.query_loader import CongaQueryLoader
 from app.response_parser import AIResponseParser
+from app.exporter import DocxExporter
+from app.query_loader import CongaQueryLoader
+from app.parser import CongaTemplateParser
+from app.conversion_engine import ConversionEngine
 
 try:
     from .schema_loader import JSONSchemaLoader
